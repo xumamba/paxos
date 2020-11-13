@@ -47,11 +47,13 @@ func (a *Acceptor) ReceiveAccepted(args *AcceptMsg, reply *AcceptedMsg) error {
 	log.Printf("Acceptor[%s]:收到第二阶段提议请求：%+v", a.getLocalAddr(), args)
 	reply.ProposeID = args.ProposeID
 	reply.AcceptorAddr = a.getLocalAddr()
+	// 容错模型，避免Proposer申请通过第一阶段后挂掉的情况。
 	if args.ProposeID >= a.getMaxProposeID() {
 		a.acceptedID = args.ProposeID
 		a.acceptedValue = args.ProposeValue
 		reply.StatusCode = successCode
 		chosenResult := &ChosenMsg{ChosenValue: a.acceptedValue}
+		// 此处持久化提议结果，以便后续集群动态伸缩。
 		for _, learnerAddr := range a.getLearnersAddr() {
 			err := callRPC(learnerAddr, "Learner.ReceiveChosen", chosenResult, &EmptyMsg{})
 			if err != nil {
