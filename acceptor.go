@@ -28,11 +28,11 @@ type Acceptor struct {
 
 // ReceivePrepare 处理第一阶段提议请求
 func (a *Acceptor) ReceivePrepare(args *PrepareMsg, reply *PromiseMsg) error {
-	log.Printf("Acceptor[%s]:收到第一阶段提议请求：%+v",a.getLocalAddr(), args)
+	log.Printf("Acceptor[%s]:收到第一阶段提议请求：%+v", a.getLocalAddr(), args)
 	reply.ProposeID = args.ProposeID
 	reply.AcceptorAddr = a.getLocalAddr()
-	if args.ProposeID > a.maxProposeID {
-		a.maxProposeID = args.ProposeID
+	if args.ProposeID > a.getMaxProposeID() {
+		a.updateMaxProposeID(args.ProposeID)
 		reply.StatusCode = successCode
 		if a.acceptedID > 0 && a.acceptedValue != nil {
 			reply.AcceptedID = a.acceptedID
@@ -44,10 +44,10 @@ func (a *Acceptor) ReceivePrepare(args *PrepareMsg, reply *PromiseMsg) error {
 
 // ReceiveAccepted 处理第二阶段提议内容
 func (a *Acceptor) ReceiveAccepted(args *AcceptMsg, reply *AcceptedMsg) error {
-	log.Printf("Acceptor[%s]:收到第二阶段提议请求：%+v",a.getLocalAddr(), args)
+	log.Printf("Acceptor[%s]:收到第二阶段提议请求：%+v", a.getLocalAddr(), args)
 	reply.ProposeID = args.ProposeID
 	reply.AcceptorAddr = a.getLocalAddr()
-	if args.ProposeID == a.maxProposeID {
+	if args.ProposeID >= a.getMaxProposeID() {
 		a.acceptedID = args.ProposeID
 		a.acceptedValue = args.ProposeValue
 		reply.StatusCode = successCode
@@ -76,6 +76,23 @@ func (a *Acceptor) getLearnersAddr() []string {
 	lAddr := a.learnersAddr
 	a.locker.RUnlock()
 	return lAddr
+}
+
+// updateMaxProposeID 更新最大提议值
+func (a *Acceptor) updateMaxProposeID(maxProposeID float32) {
+	a.locker.Lock()
+	if maxProposeID > a.maxProposeID {
+		a.maxProposeID = maxProposeID
+	}
+	a.locker.Unlock()
+}
+
+// getMaxProposeID 获取最大提议值
+func (a *Acceptor) getMaxProposeID() float32 {
+	a.locker.RLock()
+	maxProposeID := a.maxProposeID
+	a.locker.RUnlock()
+	return maxProposeID
 }
 
 func (a *Acceptor) Service() {
