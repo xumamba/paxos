@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-var isUnstableNetwork = false // 模拟不稳定的网络环境
+var isUnstableNetwork = true // 模拟不稳定的网络环境
 
 // generateProposeID 生成提议请求标识ID
 func generateProposeID(nodeID int, historyMaxPID float32) float32 {
